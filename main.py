@@ -22,6 +22,9 @@ If you don't know the answer, just say "I don't know" and don't try to make up a
 """
 
 
+def has_relevant_result(result):
+    return len(result) > 0 and result[0][1] >= 0.4
+
 def ask():
 
     function_embedding = GoogleGenerativeAIEmbeddings(
@@ -49,7 +52,7 @@ def ask():
             k=2
         )
 
-        if len(result) == 0 or result[0][1] < 0.4:
+        if not has_relevant_result(result):
             print(
                 "I couldn't find any relevant information to answer your question."
             )
@@ -75,4 +78,5 @@ def ask():
         print("Answer:", text_result.text)
 
 
-ask()
+if __name__ == "__main__":
+    ask()
