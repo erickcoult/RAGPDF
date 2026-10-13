@@ -25,6 +25,16 @@ If you don't know the answer, just say "I don't know" and don't try to make up a
 def has_relevant_result(result):
     return len(result) > 0 and result[0][1] >= 0.4
 
+def exit_question(question):
+    if question.lower().strip() == "exit":
+                print("Chat ended.")
+                return True
+    return False
+
+
+
+
+
 def ask():
 
     function_embedding = GoogleGenerativeAIEmbeddings(
@@ -43,14 +53,14 @@ def ask():
     while True:
         question = input("Enter your question(or 'exit' to quit): ")
 
-        if question.lower().strip() == "exit":
-            print("Chat ended.")
-            break
 
         result = db.similarity_search_with_relevance_scores(
             question,
             k=2
         )
+
+        if exit_question(question):
+             break
 
         if not has_relevant_result(result):
             print(
