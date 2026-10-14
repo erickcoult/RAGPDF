@@ -35,8 +35,11 @@ def exit_question(question):
 
 
 
-def ask():
+def ask(question):
 
+    if exit_question(question):
+                return
+    
     function_embedding = GoogleGenerativeAIEmbeddings(
         model="gemini-embedding-001"
     )
@@ -47,46 +50,36 @@ def ask():
     )
 
     model = ChatGoogleGenerativeAI(
-        model="gemini-3.8-flash"
+        model="gemini-3.6-flash"
     )
 
-    while True:
-        question = input("Enter your question(or 'exit' to quit): ")
+
+    result = db.similarity_search_with_relevance_scores(
+        question,
+        k=2
+    )
 
 
-        result = db.similarity_search_with_relevance_scores(
-            question,
-            k=2
-        )
+    if not has_relevant_result(result):
+            return "I couldn't find any relevant information to answer your question."
+        
+        
 
-        if exit_question(question):
-             break
+    text_results = []
 
-        if not has_relevant_result(result):
-            print(
-                "I couldn't find any relevant information to answer your question."
-            )
-            continue
+    for document, score in result:
+        text = document.page_content
+        text_results.append(text)
 
-        text_results = []
+    base_info = "\n\n----\n\n".join(text_results)
 
-        for document, score in result:
-            text = document.page_content
-            text_results.append(text)
+    prompt = ChatPromptTemplate.from_template(prompt_template)
 
-        base_info = "\n\n----\n\n".join(text_results)
+    prompt = prompt.invoke({
+        "question": question,
+        "base_info": base_info
+    })
 
-        prompt = ChatPromptTemplate.from_template(prompt_template)
+    text_result = model.invoke(prompt)
 
-        prompt = prompt.invoke({
-            "question": question,
-            "base_info": base_info
-        })
-
-        text_result = model.invoke(prompt)
-
-        print("Answer:", text_result.text)
-
-
-if __name__ == "__main__":
-    ask()
+    return text_result.text
