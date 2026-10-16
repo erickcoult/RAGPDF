@@ -21,6 +21,19 @@ Based on the following information:
 If you don't know the answer, just say "I don't know" and don't try to make up an answer.
 """
 
+function_embedding = GoogleGenerativeAIEmbeddings(
+        model="gemini-embedding-001"
+    )
+
+db = Chroma(
+        persist_directory=PATH_DB,
+        embedding_function=function_embedding
+    )
+
+model = ChatGoogleGenerativeAI(
+        model="gemini-3.6-flash"
+    )
+
 
 def has_relevant_result(result):
     return len(result) > 0 and result[0][1] >= 0.4
@@ -40,19 +53,6 @@ def ask(question):
     if exit_question(question):
                 return
     
-    function_embedding = GoogleGenerativeAIEmbeddings(
-        model="gemini-embedding-001"
-    )
-
-    db = Chroma(
-        persist_directory=PATH_DB,
-        embedding_function=function_embedding
-    )
-
-    model = ChatGoogleGenerativeAI(
-        model="gemini-3.6-flash"
-    )
-
 
     result = db.similarity_search_with_relevance_scores(
         question,

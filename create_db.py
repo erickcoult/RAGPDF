@@ -37,10 +37,15 @@ def split_chunks(document):
 
 
 def vectorize_chunks(chunks):
-    db= Chroma.from_documents(chunks, GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001"
-), persist_directory="db")
+    db = Chroma(
+        persist_directory="db",
+        embedding_function=GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
+    )
+
+    old_ids = db.get()["ids"]
+    if old_ids:
+        db.delete(ids=old_ids)  
+
+    db.add_documents(chunks)
     print("Database created successfully")
 
-
-create_db()
