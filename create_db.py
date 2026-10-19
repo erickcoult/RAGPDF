@@ -1,24 +1,41 @@
-from langchain_community.document_loaders import PyPDFDirectoryLoader
+import os
+import tempfile
+from uuid import uuid4
+
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+from main import function_embedding
 from dotenv import load_dotenv
 
 load_dotenv()
 
-FOLDER_BASE = "base"
+BASE_FOLDER = "base"
+MAX_CHUNKS = 90
 
 
-def create_db():
-    document = load_document()
+def create_db(pdf_bytes):
+    document = load_document(pdf_bytes)
     chunks = split_chunks(document)
-    vectorize_chunks(chunks)
+    
+    if len(chunks) > MAX_CHUNKS:
+        raise ValueError(
+            "This PDF has too much text for the free demo. Please upload a shorter one."
+        )
+    return vectorize_chunks(chunks)
 
 
-def load_document():
-    loader = PyPDFDirectoryLoader(FOLDER_BASE)
-    document = loader.load()
-    return document
+def load_document(pdf_bytes):
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+        temp_file.write(pdf_bytes)
+        temp_path = temp_file.name
+ 
+    try:
+        return PyPDFLoader(temp_path).load()
+    finally:
+        os.remove(temp_path)
 
 
 def split_chunks(document):
@@ -29,23 +46,14 @@ def split_chunks(document):
         add_start_index=True
     )
 
-    chunks = document_splitter.split_documents(document)
+    return document_splitter.split_documents(document)
 
-    print(len(chunks))
-
-    return chunks
 
 
 def vectorize_chunks(chunks):
-    db = Chroma(
-        persist_directory="db",
-        embedding_function=GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
+    return Chroma.from_documents(
+        chunks,
+        function_embedding,
+        collection_name=f"session_{uuid4().hex}",
     )
-
-    old_ids = db.get()["ids"]
-    if old_ids:
-        db.delete(ids=old_ids)  
-
-    db.add_documents(chunks)
-    print("Database created successfully")
 
